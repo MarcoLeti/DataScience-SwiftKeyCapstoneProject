@@ -1,4 +1,5 @@
 library(stringr)
+library(dplyr)
 library(tm)
 library(ngram)
 
@@ -7,6 +8,7 @@ blogs <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt")
 news <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
 
 CleanTheData <- function(text) {
+        require(stringr)
         text <- tolower(text)
         text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
         text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
@@ -23,6 +25,7 @@ CleanTheData <- function(text) {
 # step before call the below function str_split(text, "\\.")
 
 CreateNGrams <- function(text, n) {
+        require(dplyr)
         text <- CleanTheData(text)
         if (n <= 0) stop("n should be minimum equal 1")
         splittedText = str_split(text, "\\.")
