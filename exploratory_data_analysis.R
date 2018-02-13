@@ -16,12 +16,16 @@ CleanTheData <- function(text) {
         text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
         text <- str_replace_all(text," $|\\.$|\\. $", "")       # fix the end of the sentence
         text <- str_replace_all(text,"\\. ", ".")               # remove spaces after dots
+        text <- str_replace_all(text,"\\. ", ".")
         return(text)
 }
 
 # step before call the below function str_split(text, "\\.")
 
-CreateNGrams <- function(splittedText, n) {
+CreateNGrams <- function(text, n) {
+        text <- CleanTheData(text)
+        if (n <= 0) stop("n should be minimum equal 1")
+        splittedText = str_split(text, "\\.")
         tempNGramMatrix <- matrix(ncol = n)
         nGramsMatrix <- matrix(ncol = n)
         for (i in 1:length(splittedText)) {
@@ -35,13 +39,24 @@ CreateNGrams <- function(splittedText, n) {
                                         nGramsMatrix <- rbind(nGramsMatrix, tempNGramMatrix)
                                 }
                         }
-
                 }
         }
         nGramsMatrix <- nGramsMatrix[-1, ]
-        if (n > 2) paste()
-        return(nGramsMatrix)
+        if (n > 2) {
+                ngramCol <- capture.output(cat("paste(",
+                                               paste0("nGramsMatrix[, ", 1:(n-2), "], "),
+                                               "nGramsMatrix[, ", (n-1), "]", ")",
+                                               sep = ""))
+                nGramsDataFrame <- transmute(as.data.frame(nGramsMatrix), 
+                                             ngram = eval(parse(text = ngramCol)), 
+                                             prediction = nGramsMatrix[, n])
+        } else {
+                nGramsDataFrame <- as.data.frame(nGramsMatrix)
+                colnames(nGramsDataFrame) <- c("ngram", "prediction")
+        }
+        return(nGramsDataFrame)
 }
+
 
 ###############################################################################
 
@@ -110,21 +125,3 @@ f <- ngrams(myTab, 2L)
 # https://stackoverflow.com/questions/31316274/implementing-n-grams-for-next-word-prediction
 # https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html
 # http://www.mjdenny.com/Text_Processing_In_R.html
-
-
-CreateNGrams <- function(splittedText) {
-        tempNGramMatrix <- matrix(ncol = 2)
-        nGramsMatrix <- matrix(ncol = 2)
-        for (i in 1:length(splittedText)) {
-                for (j in 1:length(splittedText[[i]])) {
-                        temp <- str_split(splittedText[[i]][j], " ", simplify = TRUE)
-                        for (z in 2:ncol(temp)) {
-                                tempNGramMatrix[1, 1] <- temp[1, z - 1]
-                                tempNGramMatrix[1, 2] <- temp[1, z]
-                                nGramsMatrix <- rbind(nGramsMatrix, tempNGramMatrix)
-                        }
-                }
-        }
-        nGramsMatrix <- nGramsMatrix[-1, ]
-        return(nGramsMatrix)
-}
