@@ -1,0 +1,68 @@
+---
+title: "Milestone Report - Week 2"
+author: "Marco Letico"
+date: "February 14, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory Data Analysis
+
+For this analysis we will use the following package:
+
+```{r}
+library(stringr)
+library(ggplot2)
+```
+
+Let's go to upload the data. For this purpose we will create a unique file:
+
+```{r}
+files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
+
+allFiles <- unname(sapply(files, readLines))
+allFiles <- unlist(allFiles)
+```
+
+```{r}
+WordsDistribution <- function(text) {
+        require(stringr)
+        text <- tolower(text)
+        text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
+        text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
+        text <- str_replace_all(text,"[^a-zA-Z\\']", " ")       # replace everything that is                                                                   not a letter and '
+        text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
+        text <- str_replace_all(text," $", "")                  # fix the end of the sentence
+        text <- str_split(text, " ")                            # split the words by space
+        for (i in 1:length(text)) {                             # if needed loop to remove  
+                if (any(text[[i]] == "")) {                     # null characters
+                        myNullChar <- which(text[[i]] == "")
+                        text[[i]] <- text[[i]][-myNullChar]
+                }
+        }
+        text <- unlist(text)
+        text <- table(text)
+        text <- sort(text, decreasing = TRUE)
+        return(text)
+}
+```
+
+
+```{r}
+wordsCount <- WordsDistribution(allFiles)
+topWords <- wordsCount[1:60]
+topWords
+```
+
+```{r}
+topWords <- sort(topWords, decreasing = FALSE)
+topWords <- as.data.frame(topWords)
+g <- ggplot(topWords, aes(x=text, y = Freq)) 
+g <- g + geom_bar(stat="identity") + coord_flip() + labs(title = "Most Frequent Words")
+
+```

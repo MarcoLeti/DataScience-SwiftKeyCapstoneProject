@@ -7,22 +7,47 @@ twitter <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt")
 blogs <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt")
 news <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
 
-CleanTheData <- function(text) {
+files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
+
+allFiles <- unname(sapply(files, readLines))
+allFiles <- unlist(allFiles)
+
+CleanTheDataForNGrams <- function(text) {
         require(stringr)
         text <- tolower(text)
         text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
         text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
         text <- str_replace_all(text,"\\.+", ". ")              # remove multiple dots
-        text <- str_replace_all(text,"[0-9]", " ")              # remove all numbers
         text <- str_replace_all(text,"\\?|\\!", ". ")           # replace question and exclamation marks with dot
+        text <- str_replace_all(text,"[^a-zA-Z0-9\\.\\,\\']", " ") # replace everything that is not a letter, number, dot, comma
         text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
         text <- str_replace_all(text," $|\\.$|\\. $", "")       # fix the end of the sentence
         text <- str_replace_all(text,"\\. ", ".")               # remove spaces after dots
-        text <- str_replace_all(text,"\\. ", ".")
         return(text)
 }
 
-# step before call the below function str_split(text, "\\.")
+WordsDistribution <- function(text) {
+        require(stringr)
+        text <- tolower(text)
+        text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
+        text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
+        text <- str_replace_all(text,"[^a-zA-Z\\']", " ")       # replace everything that is not a letter
+        text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
+        text <- str_replace_all(text," $", "")                  # fix the end of the sentence
+        text <- str_split(text, " ")
+        for (i in 1:length(text)) {
+                if (any(text[[i]] == "")) {
+                        myNullChar <- which(text[[i]] == "")
+                        text[[i]] <- text[[i]][-myNullChar]
+                }
+        }
+        text <- unlist(text)
+        text <- table(text)
+        text <- sort(text, decreasing = TRUE)
+        return(text)
+}
 
 CreateNGrams <- function(text, n) {
         require(dplyr)
@@ -60,28 +85,15 @@ CreateNGrams <- function(text, n) {
         return(nGramsDataFrame)
 }
 
+wordsCount <- WordsDistribution(allFiles)
+topWords <- wordsCount[1:60]
+topWords <- sort(topWords, decreasing = FALSE)
+topWords <- as.data.frame(topWords)
+g <- ggplot(topWords, aes(x=text, y = Freq)) 
+g <- g + geom_bar(stat="identity") + coord_flip() + labs(title = "Most Frequent Words")
+
 
 ###############################################################################
-
-myText <- twitter
-myText <- tolower(myText)
-# replace everything that is not a character or a number
-myText <- str_replace_all(myText,"[^a-zA-Z0-9]", " ")
-# collapse all the white spaces bigger than one
-myText <- str_replace_all(myText,"[\\s]+", " ")
-myText <- str_split(myText, " ")
-
-for (i in 1:length(myText)) {
-        if (any(myText[[i]] == "")) {
-                myNullChar <- which(myText[[i]] == "")
-                myText[[i]] <- myText[[i]][-myNullChar]
-        }
-}
-
-myTab <- unlist(myText)
-myTab <- table(myTab)
-myTab <- sort(myTab, decreasing = TRUE)
-myTab[30]
 
 # estrapolate the number
 as.numeric(myTab["what"])
@@ -93,38 +105,26 @@ grep("http:[[:alnum:]]*", twitter, value = TRUE) #remove url
 grep("\\.$", myText, value = TRUE)
 str_replace_all(myText,"\\.", "\n")
 
-
-# process data for prediction:
-
-a <- as.data.frame(str_split(twitter[1:2000], "\\.+|\\?|\\!", simplify = TRUE))
-b <- data.frame()
-for (i in 1:nrow(a)) {
-        for (j in 1:ncol(a)) {
-                temp <- as.data.frame(str_split(a[i, j], " ", simplify = TRUE))
-                b <- rbind.fill(b, temp)
-        }
-        
-}
-
-c <- matrix(ncol = 2)
-d <- matrix(ncol = 2)
-for (i in 1: length(myText)){
-        a <- str_split(myText[i], "\\.+|\\?|\\!", simplify = TRUE)
-        for (j in 1:ncol(a)) {
-                temp <- str_split(a[1, j], " ", simplify = TRUE)
-                for (z in 2:ncol(temp)) {
-                        c[1, 1] <- temp[1, z - 1]
-                        c[1, 2] <- temp[1, z]
-                        d <- rbind(d, c)
-                }
-        }
-}
-
-k <- a[1, 1]
-f <- ngrams(myTab, 2L)
+# to plot
+ggplot(as.data.frame(wordsCount[1:60]), aes(x=text, y = Freq)) + geom_bar(stat="identity") + coord_flip()
 # Links:
 # https://rpubs.com/brianzive/textmining
 # https://rstudio-pubs-static.s3.amazonaws.com/265713_cbef910aee7642dc8b62996e38d2825d.html
 # https://stackoverflow.com/questions/31316274/implementing-n-grams-for-next-word-prediction
 # https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html
 # http://www.mjdenny.com/Text_Processing_In_R.html
+
+CleanTheData <- function(text) {
+        require(stringr)
+        text <- tolower(text)
+        text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
+        text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
+        text <- str_replace_all(text,"\\.+", ". ")              # remove multiple dots
+        text <- str_replace_all(text,"[0-9]", " ")              # remove all numbers
+        text <- str_replace_all(text,"\\?|\\!", ". ")           # replace question and exclamation marks with dot
+        text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
+        text <- str_replace_all(text," $|\\.$|\\. $", "")       # fix the end of the sentence
+        text <- str_replace_all(text,"\\. ", ".")               # remove spaces after dots
+        text <- str_replace_all(text,"\\. ", ".")
+        return(text)
+}
