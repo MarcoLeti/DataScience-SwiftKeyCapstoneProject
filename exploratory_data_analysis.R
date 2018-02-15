@@ -2,6 +2,7 @@ library(stringr)
 library(dplyr)
 library(tm)
 library(ngram)
+library(RWeka)
 
 twitter <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt")
 blogs <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt")
@@ -11,8 +12,8 @@ files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
            "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
            "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
 
-allFiles <- unname(sapply(files, readLines))
-allFiles <- unlist(allFiles)
+files <- unname(sapply(files, readLines))
+files <- unlist(files)
 
 CleanTheDataForNGrams <- function(text) {
         require(stringr)
@@ -94,19 +95,92 @@ g <- g + geom_bar(stat="identity") + coord_flip() + labs(title = "Most Frequent 
 
 
 ###############################################################################
+library(stringr)
+library(tm)
+library(RWeka)
+library(ggplot2)
+library(wordcloud)
+library(quanteda)
+# sample to be created randomly
 
-# estrapolate the number
-as.numeric(myTab["what"])
+files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
+           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
 
-grep("http:[[:alnum:]]*", twitter, value = TRUE) #remove url
-# "#\\S+", "", x remove hashtag
-# twitter handles "@\\S+", "", x ???
+files <- unname(sapply(files, readLines))
+files <- unlist(files)
 
-grep("\\.$", myText, value = TRUE)
-str_replace_all(myText,"\\.", "\n")
+set.seed(4783)
+dataSample <- sample(files, length(files)*0.01)
+dataSample <- tolower(dataSample)
+dataSample <- str_replace_all(dataSample,"(f|ht)tp(s?)://(.*)[.][a-z]+", " ")
+dataSample <- str_replace_all(dataSample,"#\\S+", " ")
+dataSample <- str_replace_all(dataSample,"[^a-zA-Z\\']", " ")       # replace everything that is not a letter
+dataSample <- str_replace_all(dataSample,"[\\s]+", " ")             # collapse additional spaces
+dataSample <- str_replace_all(dataSample," $", "")                  # fix the end of the sentence
 
-# to plot
-ggplot(as.data.frame(wordsCount[1:60]), aes(x=text, y = Freq)) + geom_bar(stat="identity") + coord_flip()
+corpus <- VCorpus(VectorSource(dataSample))
+corpus <- tm_map(corpus, tolower)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, PlainTextDocument)
+
+####################RWEKA#################################################
+BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=2, max=2))
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=3, max=3))
+# QuadgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=4, max=4))
+
+unigrams <- TermDocumentMatrix(corpus)
+bigrams <- TermDocumentMatrix(corpus, control = list(tokenize = BigramTokenizer))
+trigrams <- TermDocumentMatrix(corpus, control = list(tokenize = TrigramTokenizer))
+
+unigrams <- removeSparseTerms(unigrams, 0.9999)
+unigrams <- sort(rowSums(as.matrix(unigrams)), decreasing = TRUE)
+unigrams <- data.frame(n_gram = names(unigrams), freq = unigrams)
+
+top <- unigrams[1:50, ]
+g <- ggplot(top, aes(x = reorder(n_gram, freq), y = freq))
+g <- g + labs(title = "50 top unigrams", x = "N-Gram", y = "Frequency")
+g + geom_bar(stat="identity", fill="#00BA38", colour="black") + coord_flip()
+
+
+bigrams <- removeSparseTerms(bigrams, 0.9999)
+bigrams <- sort(rowSums(as.matrix(bigrams)), decreasing = TRUE)
+bigrams <- data.frame(n_gram = names(bigrams), freq = bigrams)
+top <- bigrams[1:50, ]
+g <- ggplot(top, aes(x = reorder(n_gram, freq), y = freq))
+g <- g + labs(title = "50 top unigrams", x = "N-Gram", y = "Frequency")
+g + geom_bar(stat="identity", fill="#F8766D", colour="black") + coord_flip()
+
+
+########################QUANTEDA############################################
+
+set.seed(4783)
+dataSample <- sample(files, length(files)*0.01)
+dataSample <- tolower(dataSample)
+dataSample <- str_replace_all(dataSample,"(f|ht)tp(s?)://(.*)[.][a-z]+", " ")
+dataSample <- str_replace_all(dataSample,"#\\S+", " ")
+dataSample <- str_replace_all(dataSample,"[^a-zA-Z\\']", " ")       # replace everything that is not a letter
+dataSample <- str_replace_all(dataSample,"[\\s]+", " ")             # collapse additional spaces
+dataSample <- str_replace_all(dataSample," $", "")                  # fix the end of the sentence
+
+corpus <- quanteda::corpus(dataSample)
+bigrams <- dfm(corpus, ngrams = 2, concatenator = " ")
+bigrams <- sort(colSums(as.matrix(bigrams)), decreasing = TRUE)
+bigrams <- data.frame(n_gram = names(bigrams), freq = bigrams, row.names = FALSE)
+
+##F8766D
+#619CFF
+
+wordcloud(words = top[, 1], freq = top[, 2], 
+          scale = c(5, 1), max.words = 100, random.order = FALSE, rot.per = 0.35, 
+          use.r.layout = FALSE, colors = brewer.pal(8, "Dark2"))
+
+
+
+##############################################################################
+
+grep("(f|ht)tp(s?)://(.*)[.][a-z]+", allFiles, value = TRUE)
+
 # Links:
 # https://rpubs.com/brianzive/textmining
 # https://rstudio-pubs-static.s3.amazonaws.com/265713_cbef910aee7642dc8b62996e38d2825d.html

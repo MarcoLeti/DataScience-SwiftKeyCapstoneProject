@@ -8,61 +8,102 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Summary
 
-## Exploratory Data Analysis
+quanteda because:
+- faster
+- doesn't remove punctuations and ....
+
+## Getting the data
 
 For this analysis we will use the following package:
 
-```{r}
-library(stringr)
-library(ggplot2)
+```{r, message=FALSE}
+library(stringr)        # to clean and manipulate the data
+library(quanteda)       # for NPL processing
+library(ggplot2)        # for visualization
 ```
 
-Let's go to upload the data. For this purpose we will create a unique file:
+For exploratory data analysis purpose, we will upload the three different files in one unique file:
 
 ```{r}
+# unzip the file
 files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
            "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
            "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
 
-allFiles <- unname(sapply(files, readLines))
-allFiles <- unlist(allFiles)
+files <- unname(sapply(files, readLines))
+files <- unlist(files)
 ```
 
+Due to the huge dimension we decided, as also suggested on the assignment, to create a random sample of the entire data:
+
 ```{r}
-WordsDistribution <- function(text) {
+set.seed(4783)
+dataSample <- sample(files, length(files)*0.01)
+```
+
+## Cleaning the data
+
+Clean the data is very important in NPL, the following function permits us to do it. We will use different processes in case we want unigrams, bigrams or more. This because...
+
+The function works, in order, # remove hashtags if any, # remove URL# remove multiple dots# replace question and exclamation marks with dot# replace everything that is not a letter, dot, ' or comma if n > 2# collapse additional spaces# fix the end of the sentence# remove spaces after dots
+
+```{r}
+PrepareTheData <- function(text, unigram = FALSE) {
+        if (n < 1) stop("n must be bigger than 0")
         require(stringr)
         text <- tolower(text)
-        text <- str_replace_all(text,"#\\S+", " ")              # remove hashtags if any
-        text <- str_replace_all(text,"http:[[:alnum:]]*", " ")  # remove URL
-        text <- str_replace_all(text,"[^a-zA-Z\\']", " ")       # replace everything that is                                                                   not a letter and '
-        text <- str_replace_all(text,"[\\s]+", " ")             # collapse additional spaces
-        text <- str_replace_all(text," $", "")                  # fix the end of the sentence
-        text <- str_split(text, " ")                            # split the words by space
-        for (i in 1:length(text)) {                             # if needed loop to remove  
-                if (any(text[[i]] == "")) {                     # null characters
-                        myNullChar <- which(text[[i]] == "")
-                        text[[i]] <- text[[i]][-myNullChar]
-                }
+        text <- str_replace_all(text,"#\\S+", " ")
+        text <- str_replace_all(text,"(f|ht)tp(s?)://(.*)[.][a-z]+", " ")
+        text <- str_replace_all(text,"\\.+", ". ")
+        text <- str_replace_all(text,"\\?|\\!", ". ")
+        if (unigram = FALSE) {
+                text <- str_replace_all(text,"[^a-zA-Z\\.\\,\\']", " ")
+        } else {
+                text <- str_replace_all(text,"[^a-zA-Z\\.\\']", " ")
         }
+        text <- str_replace_all(text,"[\\s]+", " ")
+        text <- str_replace_all(text," $|\\.$|\\. $", "")
+        text <- str_replace_all(text,"\\. ", ".")
+        text <- str_replace_all(text,"\\, ", ",")
+        text <- str_split(text, "\\.|\\,")
         text <- unlist(text)
-        text <- table(text)
-        text <- sort(text, decreasing = TRUE)
         return(text)
 }
 ```
 
 
 ```{r}
-wordsCount <- WordsDistribution(allFiles)
-topWords <- wordsCount[1:60]
-topWords
+unigramsData <- PrepareTheData(dataSample, unigram = TRUE)
+multigramsData <- PrepareTheData(dataSample)
+unigramsCorpus <- corpus(unigramsData)
+multigramsCorpus <- corpus(unigramsData)
 ```
 
-```{r}
-topWords <- sort(topWords, decreasing = FALSE)
-topWords <- as.data.frame(topWords)
-g <- ggplot(topWords, aes(x=text, y = Freq)) 
-g <- g + geom_bar(stat="identity") + coord_flip() + labs(title = "Most Frequent Words")
+## Exploratory Data Analysis
 
+```{r}
+unigrams <- dfm(unigramsCorpus, ngrams = 1, concatenator = " ", 
+                remove =stopwords("english"))
+unigrams <- textstat_frequency(unigrams, n = 50)
+
+bigrams <- dfm(multigramsCorpus, ngrams = 2, concatenator = " ", 
+               remove = stopwords("english"))
+bigrams <- textstat_frequency(bigrams, n = 50)
+
+trigrams <- dfm(multigramsCorpus, ngrams = 2, concatenator = " ", 
+               remove = stopwords("english"))
+bigrams <- textstat_frequency(bigrams, n = 50)
+```
+
+## Visualization
+
+```{r}
+plotTopFeatures <- function(frequencyMatrix, n = 50, fill = "black") {
+        frequencyMatrix <- textstat_frequency(frequencyMatrix, n = n)
+        g <- ggplot(frequencyMatrix, aes(x = reorder(feature, frequency), y = frequency))
+        g <- g + labs(title = "50 top unigrams", x = "N-Gram", y = "Frequency")
+        g + geom_bar(stat="identity", fill=fill, colour="black") + coord_flip()
+}
 ```
