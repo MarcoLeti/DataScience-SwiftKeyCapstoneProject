@@ -8,35 +8,83 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 ## Summary
 
-quanteda because:
-- faster
-- doesn't remove punctuations and ....
+The goal of this project is just to display that we've gotten used to working with the data and that we are on track to create our prediction algorithm. This document should be concise and explain only the major features of the data we have identified and briefly summarize our plans for creating the prediction algorithm and Shiny app in a way that would be understandable to a non-data scientist manager. We should make use of tables and plots to illustrate important summaries of the data set. The motivation for this project is to: 
+1. Demonstrate that we've downloaded the data and have successfully loaded it in.
+2. Create a basic report of summary statistics about the data sets.
+3. Report any interesting findings that we amassed so far.
+4. Get feedback on our plans for creating a prediction algorithm and Shiny app.
 
 ## Getting the data
 
-For this analysis we will use the following package:
+For this analysis we will use the following package: `stringr` package is used to clean and manipulate the data. The `quanteda` package is the main package we use for NPL processing. We decided to use this package because it seems is more faster than `RWeka` and it doesn't remove automatically the punctuation while performing tokenizations. Finally `ggplot2`, `gridExtra` and `wordcloud2` are used for the visualization of the results.
 
 ```{r, message=FALSE}
-library(stringr)        # to clean and manipulate the data
-library(quanteda)       # for NPL processing
-library(ggplot2)        # for visualization
+library(stringr)
+library(quanteda)
+library(ggplot2)
+library(gridExtra)
+library(wordcloud2)
 ```
 
-For exploratory data analysis purpose, we will upload the three different files in one unique file:
+For exploratory data analysis purpose, we will also create a unique file containing all the three different files:
+
+```{r, warning=FALSE}
+# download and unzip the file
+
+twitter <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt")
+blogs <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt")
+news <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
+
+files <- unlist(list(twitter, blogs, news))
+```
+
+Files consist of the following information. Here we are going to calculate the length of the files, consisting in the number of rows for each file.
 
 ```{r}
-# unzip the file
-files <- c("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt",
-           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt",
-           "..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
+lengths <- data.frame(c("twitter", "blogs", "news"), 
+                      c(length(twitter), length(blogs), length(news)))
+colnames(lengths) <- c("source", "rowsCount")
 
-files <- unname(sapply(files, readLines))
-files <- unlist(files)
+g1 <- ggplot(lengths, aes(x = reorder(source, -rowsCount), y = rowsCount))
+g1 <- g1 + geom_bar(stat = "identity", fill = c("#E69F00", "#56B4E9", "#999999"),
+                    colour="black") 
+g1 <- g1 + ggtitle("Number of rows in the text") + xlab("Source") + ylab("Count")
+g1 <- g1 + geom_text(aes(label=lengths$rowsCount), vjust=-0.3, size=3.5)
 ```
 
-Due to the huge dimension we decided, as also suggested on the assignment, to create a random sample of the entire data:
+Here we are going to perform some pre-cleaning leaving only the characters in every string and we perform the count of the words.
+
+```{r}
+twitterWords <- str_replace_all(twitter,"[^a-zA-Z]", " ")
+twitterWords <- sum(str_count(twitter, "\\S+"))
+
+blogsWords <- str_replace_all(blogs,"[^a-zA-Z]", " ")
+blogsWords <- sum(str_count(blogs, "\\S+"))
+
+newsWords <- str_replace_all(news,"[^a-zA-Z]", " ")
+newsWords <- sum(str_count(news, "\\S+"))
+
+counts <- data.frame(c("twitter", "blogs", "news"), 
+                     c(twitterWords, blogsWords, newsWords))
+colnames(counts) <- c("source", "wordsCount")
+
+g2 <- ggplot(counts, aes(x = reorder(source, -wordsCount), y = wordsCount))
+g2 <- g2 + geom_bar(stat = "identity", fill = c("#56B4E9", "#E69F00", "#999999"),
+                    colour="black")
+g2 <- g2 + ggtitle("Number of words in the text") + xlab("Source") + ylab("Count")
+g2 <- g2 + geom_text(aes(label=counts$wordsCount), vjust=-0.3, size=3.5)
+```
+
+Below we plot the data collected. We can notice that, meanwhile the "twitter" file has more rows, it has a less number of words than the "blogs" file. The weigth of the "news" file is not so big if compared to the other two, either in term of rows and words.
+
+```{r}
+grid.arrange(g1, g2, ncol = 2)
+```
+
+We proceed with our analysis with the unique file, due to his huge dimension we decided, as also suggested by the assignment, to create a random sample of the entire data. This data set will be used to create and analyse the distributions of the n-grams. In our case we decided to take a random 10% of all the dataset:
 
 ```{r}
 set.seed(4783)
@@ -45,25 +93,32 @@ dataSample <- sample(files, length(files)*0.01)
 
 ## Cleaning the data
 
-Clean the data is very important in NPL, the following function permits us to do it. We will use different processes in case we want unigrams, bigrams or more. This because...
+Clean the data is very important in NPL, the following function permits us to do it properly. Our strategy is to use two different processes in case we want unigrams or more. The different is that for unigrams we will remove the commas from the string, this because in the case of bigrams or more, we do not want to combine words separated by commas, because the bigram will not have sense. Let's take the example below:
 
-The function works, in order, # remove hashtags if any, # remove URL# remove multiple dots# replace question and exclamation marks with dot# replace everything that is not a letter, dot, ' or comma if n > 2# collapse additional spaces# fix the end of the sentence# remove spaces after dots
+```{r, echo = FALSE}
+twitter[1]
+```
+
+In the above sentence we can see how the comma separate the same words. Without considering this we will have a bigram compose by two times the word "way". A similar concept is for dots. With our function we will take care of commas and dots and we will separate the words based on this assumption.
 
 ```{r}
 PrepareTheData <- function(text, unigram = FALSE) {
-        if (n < 1) stop("n must be bigger than 0")
         require(stringr)
         text <- tolower(text)
         text <- str_replace_all(text,"#\\S+", " ")
         text <- str_replace_all(text,"(f|ht)tp(s?)://(.*)[.][a-z]+", " ")
         text <- str_replace_all(text,"\\.+", ". ")
         text <- str_replace_all(text,"\\?|\\!", ". ")
-        if (unigram = FALSE) {
+        if (!unigram) {
                 text <- str_replace_all(text,"[^a-zA-Z\\.\\,\\']", " ")
         } else {
                 text <- str_replace_all(text,"[^a-zA-Z\\.\\']", " ")
         }
+        text <- str_replace_all(text,"\\ ' |\\' |\\ '", " ")
         text <- str_replace_all(text,"[\\s]+", " ")
+        text <- str_replace_all(text," s ", "'s ")
+        text <- str_replace_all(text," t ", "'t ")
+        text <- str_replace_all(text," u ", " you ")
         text <- str_replace_all(text," $|\\.$|\\. $", "")
         text <- str_replace_all(text,"\\. ", ".")
         text <- str_replace_all(text,"\\, ", ",")
@@ -73,6 +128,7 @@ PrepareTheData <- function(text, unigram = FALSE) {
 }
 ```
 
+After having obtained our personalized split, we are going to create the corpus with the `quanteda` package.
 
 ```{r}
 unigramsData <- PrepareTheData(dataSample, unigram = TRUE)
@@ -83,27 +139,63 @@ multigramsCorpus <- corpus(unigramsData)
 
 ## Exploratory Data Analysis
 
-```{r}
-unigrams <- dfm(unigramsCorpus, ngrams = 1, concatenator = " ", 
-                remove =stopwords("english"))
-unigrams <- textstat_frequency(unigrams, n = 50)
+Below, with the function `dfm`, we are going to create our document term matrix for unigrams, bigrams and trigrams.
+
+```{r, message = FALSE}
+unigrams <- dfm(unigramsCorpus, ngrams = 1, concatenator = " ",
+                remove = stopwords("english"), removePunct = FALSE)
 
 bigrams <- dfm(multigramsCorpus, ngrams = 2, concatenator = " ", 
-               remove = stopwords("english"))
-bigrams <- textstat_frequency(bigrams, n = 50)
+               remove = stopwords("english"), removePunct = FALSE)
 
-trigrams <- dfm(multigramsCorpus, ngrams = 2, concatenator = " ", 
-               remove = stopwords("english"))
-bigrams <- textstat_frequency(bigrams, n = 50)
+trigrams <- dfm(multigramsCorpus, ngrams = 3, concatenator = " ", 
+               remove = stopwords("english"), removePunct = FALSE)
 ```
 
 ## Visualization
 
+Finally we are going to calculate the frequency of the top 50 most frequent n-grams with the function `textstat_frequency` and plot it. As we have to repeat it for 3 times, we created the following function to plot the histogram of the frequency. We add also the world cloud function to plot a nice world cloud.
+
 ```{r}
-plotTopFeatures <- function(frequencyMatrix, n = 50, fill = "black") {
-        frequencyMatrix <- textstat_frequency(frequencyMatrix, n = n)
-        g <- ggplot(frequencyMatrix, aes(x = reorder(feature, frequency), y = frequency))
-        g <- g + labs(title = "50 top unigrams", x = "N-Gram", y = "Frequency")
-        g + geom_bar(stat="identity", fill=fill, colour="black") + coord_flip()
+plotTopFeatures <- function(frequencyMatrix, wc = FALSE, n = 50, fill = "black") {
+        tempFrequencyMatrix <- textstat_frequency(frequencyMatrix, n = n)
+    if (!wc){
+        g <- ggplot(tempFrequencyMatrix, aes(x = reorder(feature, frequency), y = frequency))
+        g <- g + labs(title = paste(deparse(substitute(n)), "top", 
+                        deparse(substitute(frequencyMatrix)), sep = " "),
+                        x = "N-Gram", y = "Frequency")
+        g + geom_bar(stat="identity", fill=fill, colour="black") + coord_flip()  
+    } else {
+        wordcloud2(tempFrequencyMatrix)
+    }
+
 }
+```
+
+Finally we are showing below the 50 most frequent words in our data sample:
+
+```{r}
+plotTopFeatures(unigrams, fill = "#F8766D")
+```
+
+```{r}
+plotTopFeatures(unigrams, wc = T)
+```
+
+Then we plot the bigrams:
+```{r}
+plotTopFeatures(bigrams, fill = "#00BA38")
+```
+
+```{r}
+plotTopFeatures(bigrams, wc = T)
+```
+
+And last but not least, is the turn of the trigrams:
+```{r}
+plotTopFeatures(trigrams, fill = "#619CFF")
+```
+
+```{r}
+plotTopFeatures(trigrams, wc = T)
 ```

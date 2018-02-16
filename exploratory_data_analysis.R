@@ -168,7 +168,7 @@ bigrams <- dfm(corpus, ngrams = 2, concatenator = " ")
 bigrams <- sort(colSums(as.matrix(bigrams)), decreasing = TRUE)
 bigrams <- data.frame(n_gram = names(bigrams), freq = bigrams, row.names = FALSE)
 
-##F8766D
+#F8766D
 #619CFF
 
 wordcloud(words = top[, 1], freq = top[, 2], 
@@ -181,12 +181,7 @@ wordcloud(words = top[, 1], freq = top[, 2],
 
 grep("(f|ht)tp(s?)://(.*)[.][a-z]+", allFiles, value = TRUE)
 
-# Links:
-# https://rpubs.com/brianzive/textmining
-# https://rstudio-pubs-static.s3.amazonaws.com/265713_cbef910aee7642dc8b62996e38d2825d.html
-# https://stackoverflow.com/questions/31316274/implementing-n-grams-for-next-word-prediction
-# https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html
-# http://www.mjdenny.com/Text_Processing_In_R.html
+# What the function does is, in order, remove the hashtags if any, remove URL, remove multiple dots, replace question and exclamation marks with dots, replace everything that is not a letter, dot, ' or comma if we are looking for bigrams or more, exclude commas in case we want unigram, collapse additional spaces, fix the end of the sentence and remove spaces after dots and commas. Finally splits the data based on dots or commas.
 
 CleanTheData <- function(text) {
         require(stringr)
