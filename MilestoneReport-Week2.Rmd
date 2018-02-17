@@ -1,7 +1,7 @@
 ---
-title: "Milestone Report - Week 2"
+title: "Ngrams analysis and NPL modelling"
 author: "Marco Letico"
-date: "February 14, 2018"
+date: "February 17, 2018"
 output: html_document
 ---
 
@@ -141,7 +141,7 @@ multigramsCorpus <- corpus(unigramsData)
 
 Below, with the function `dfm`, we are going to create our document term matrix for unigrams, bigrams and trigrams.
 
-```{r, message = FALSE}
+```{r, warning = FALSE}
 unigrams <- dfm(unigramsCorpus, ngrams = 1, concatenator = " ",
                 remove = stopwords("english"), removePunct = FALSE)
 
@@ -157,7 +157,9 @@ trigrams <- dfm(multigramsCorpus, ngrams = 3, concatenator = " ",
 Finally we are going to calculate the frequency of the top 50 most frequent n-grams with the function `textstat_frequency` and plot it. As we have to repeat it for 3 times, we created the following function to plot the histogram of the frequency. We add also the world cloud function to plot a nice world cloud.
 
 ```{r}
-plotTopFeatures <- function(frequencyMatrix, wc = FALSE, n = 50, fill = "black") {
+plotTopFeatures <- function(frequencyMatrix, wc = FALSE, n = 50, fill = "black", size = 1) {
+        require(webshot)
+        require(htmlwidgets)
         tempFrequencyMatrix <- textstat_frequency(frequencyMatrix, n = n)
     if (!wc){
         g <- ggplot(tempFrequencyMatrix, aes(x = reorder(feature, frequency), y = frequency))
@@ -166,7 +168,11 @@ plotTopFeatures <- function(frequencyMatrix, wc = FALSE, n = 50, fill = "black")
                         x = "N-Gram", y = "Frequency")
         g + geom_bar(stat="identity", fill=fill, colour="black") + coord_flip()  
     } else {
-        wordcloud2(tempFrequencyMatrix)
+        fileName <- paste(deparse(substitute(frequencyMatrix)), "wordcloud.png", sep = "_")
+        wcPlot <- wordcloud2(tempFrequencyMatrix, size = size)
+        saveWidget(wcPlot, "tmp.html", selfcontained = F)
+        webshot("tmp.html", fileName, delay = 30, vwidth = 2500, vheight = 1300)
+        
     }
 
 }
@@ -174,12 +180,12 @@ plotTopFeatures <- function(frequencyMatrix, wc = FALSE, n = 50, fill = "black")
 
 Finally we are showing below the 50 most frequent words in our data sample:
 
-```{r}
+```{r, message=FALSE}
 plotTopFeatures(unigrams, fill = "#F8766D")
 ```
 
 ```{r}
-plotTopFeatures(unigrams, wc = T)
+plotTopFeatures(unigrams, n = 500, wc = T, size = 1.5)
 ```
 
 Then we plot the bigrams:
@@ -188,7 +194,7 @@ plotTopFeatures(bigrams, fill = "#00BA38")
 ```
 
 ```{r}
-plotTopFeatures(bigrams, wc = T)
+plotTopFeatures(bigrams, n = 500, wc = T, size = 2)
 ```
 
 And last but not least, is the turn of the trigrams:
@@ -197,5 +203,9 @@ plotTopFeatures(trigrams, fill = "#619CFF")
 ```
 
 ```{r}
-plotTopFeatures(trigrams, wc = T)
+plotTopFeatures(trigrams, n = 500, wc = T)
 ```
+
+## Conclusions and further plans
+
+This is a preliminary exploratory analysis. We saw the distributions of the words, bigrams and trigrams. Our aim will be to create a Shiny application where the user will be able to insert the text and receive some prediction regarding the next word. The models done here will be necessary to this scope.
