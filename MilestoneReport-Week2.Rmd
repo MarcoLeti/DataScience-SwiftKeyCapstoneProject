@@ -32,11 +32,14 @@ library(wordcloud2)
 For exploratory data analysis purpose, we will also create a unique file containing all the three different files:
 
 ```{r, warning=FALSE}
-# download and unzip the file
+if(!exists("Data")){dir.create("Data")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+download.file(fileUrl, destfile = ".\\Data\\Coursera-SwiftKey.zip")
+unzip(zipfile = ".\\Data\\Coursera-SwiftKey.zip", exdir = ".\\Data")
 
-twitter <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.twitter.txt")
-blogs <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.blogs.txt")
-news <- readLines("..\\Coursera-SwiftKey\\final\\en_US\\en_US.news.txt")
+twitter <- readLines(".\\Data\\final\\en_US\\en_US.twitter.txt")
+blogs <- readLines(".\\Data\\final\\en_US\\en_US.blogs.txt")
+news <- readLines(".\\Data\\final\\en_US\\en_US.news.txt")
 
 files <- unlist(list(twitter, blogs, news))
 ```
