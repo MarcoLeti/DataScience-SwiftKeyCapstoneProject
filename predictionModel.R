@@ -1,47 +1,73 @@
 library(stringr)
-library(quanteda)
+library(data.table)
 
-twitter <- readLines(".\\Data\\final\\en_US\\en_US.twitter.txt")
-blogs <- readLines(".\\Data\\final\\en_US\\en_US.blogs.txt")
-news <- readLines(".\\Data\\final\\en_US\\en_US.news.txt")
+#bigrams <- readRDS("bigrams.RDS")
+#setkeyv(bigrams, "base")
+#trigrams <- readRDS("trigrams.RDS")
+#setkeyv(trigrams, "base")
+#fourgrams <- readRDS("fourgrams.RDS")
+#setkeyv(fourgrams, "base")
+#fivegrams <- readRDS("fivegrams.RDS")
+#setkeyv(fivegrams, "base")
 
-files <- unlist(list(twitter, blogs, news))
+#bigrams[base %in% "ice", .(predWord, frequency)]
+#trigrams[base %in% "monitoring the", .(predWord, frequency)]
+#fourgrams[base %in% "want an ice", .(predWord, frequency)]
+#fivegrams[base %in% "a vote has been", .(predWord, frequency)]
 
-PrepareTheData <- function(text, unigram = FALSE) {
-        require(stringr)
-        text <- tolower(text)
-        text <- str_replace_all(text,"#\\S+", " ")
-        text <- str_replace_all(text,"(f|ht)tp(s?)://(.*)[.][a-z]+", " ")
-        text <- str_replace_all(text,"\\.+", ". ")
-        text <- str_replace_all(text,"\\?|\\!", ". ")
-        if (!unigram) {
-                text <- str_replace_all(text,"[^a-zA-Z\\.\\,\\']", " ")
-        } else {
-                text <- str_replace_all(text,"[^a-zA-Z\\.\\']", " ")
+#test[,extracted:=sapply(strsplit(original,'\\s+'),function(v) paste(collapse=' ',tail(v,5L)))]
+#source("..\\numbers2words.R")
+source("C:/Users/Marco_Letico/Desktop/DataScience-SwiftKeyCapstoneProject/numbers2words.R")
+predictWord <- function(text) {
+        predict <- str_detect(text, " $")
+        if (predict & !is.na(text)) {
+                text <- str_to_lower(text)
+                text <- numbers2wordsAll(text)
+                text <- str_replace_all(text,"[^a-zA-Z\\'\\ ]", "") 
+                text <- str_replace_all(text,"[\\s]+$", "")
+                text <- str_replace_all(text,"[\\s]+", " ")
+                count <- str_count(text, "\\S+")
+                pattern <- "\\w+( \\w+){0,%d}$"
+                predictedWords <- vector()
+                if (count >= 4) {
+                        tmpText <- str_extract(text, sprintf(pattern, 3))
+                        predictedWords <- fivegrams[base %in% tmpText, predWord]
+                }
+                
+                if (length(predictedWords) == 3) return(predictedWords)
+                
+                if (count == 3 | length(predictedWords) < 3) {
+                        tmpText <- str_extract(text, sprintf(pattern, 2))
+                        tmp <- fourgrams[base %in% tmpText, predWord]
+                        predictedWords <- c(predictedWords,
+                                            tmp[!(tmp %in% predictedWords)])
+                }
+                
+                if (length(predictedWords) >= 3) return(predictedWords[1:3])
+                
+                if (count == 2 | length(predictedWords) < 3) {
+                        tmpText <- str_extract(text, sprintf(pattern, 1))
+                        tmp <- trigrams[base %in% tmpText, predWord]
+                        predictedWords <- c(predictedWords, 
+                                            tmp[!(tmp %in% predictedWords)])
+                }
+                
+                if (length(predictedWords) >= 3) return(predictedWords[1:3])
+                
+                if (count == 1 | length(predictedWords) < 3) {
+                        tmpText <- str_extract(text, sprintf(pattern, 0))
+                        tmp <-  bigrams[base %in% tmpText, predWord]
+                        predictedWords <- c(predictedWords, 
+                                            tmp[!(tmp %in% predictedWords)])
+                }
+                
+                if (length(predictedWords) >= 3) return(predictedWords[1:3])
+                
+                randomWords <- sample(unigrams$feature, size = 3)
+                predictedWords <- c(predictedWords, 
+                                    randomWords[!(randomWords %in% predictedWords)])
+                
+                return(predictedWords[1:3])
         }
-        text <- str_replace_all(text,"\\ ' |\\' |\\ '", " ")
-        text <- str_replace_all(text,"[\\s]+", " ")
-        text <- str_replace_all(text," s ", "'s ")
-        text <- str_replace_all(text," t ", "'t ")
-        text <- str_replace_all(text," u ", " you ")
-        text <- str_replace_all(text," $|\\.$|\\. $", "")
-        text <- str_replace_all(text,"\\. ", ".")
-        text <- str_replace_all(text,"\\, ", ",")
-        text <- str_split(text, "\\.|\\,")
-        text <- unlist(text)
-        return(text)
 }
-
-unigramsData <- PrepareTheData(files, unigram = TRUE)
-multigramsData <- PrepareTheData(files)
-unigramsCorpus <- corpus(unigramsData)
-multigramsCorpus <- corpus(unigramsData)
-
-unigrams <- dfm(unigramsCorpus, ngrams = 1, concatenator = " ",
-                remove = stopwords("english"), removePunct = FALSE)
-
-bigrams <- dfm(multigramsCorpus, ngrams = 2, concatenator = " ", 
-               remove = stopwords("english"), removePunct = FALSE)
-
-trigrams <- dfm(multigramsCorpus, ngrams = 3, concatenator = " ", 
-                remove = stopwords("english"), removePunct = FALSE)
+################################
