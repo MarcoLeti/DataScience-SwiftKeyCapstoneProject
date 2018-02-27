@@ -1,0 +1,48 @@
+NPL Modelling - Markov Chain and N-Grams Word Prediction
+========================================================
+author: Marco Letico
+date: 27 February 2018
+autosize: true
+
+The application was built for the final Capstone project of the Data Science Specialization provided by the Johns Hopkins University through Coursera with the cooperation of SwiftKey. In these slides we will pitch the application going through the usage of it.
+                                        
+NPL Modelling - The Model
+========================================================
+
+This application was realized starting from 3 raw textual files downloaded from twitter, from some blogs and news websites.
+
+In the very first moment, the data has been accurately cleaned. Then it was divided in sub-sentences where the delimiter was the punctuation. At this point was created the Corpus and the data was consequently processed to extract the document term matrix for the n-grams. At this point we calculated the frequency. Once the frequency was obtained we used the Markov chain model below to calculate the predicted word:
+
+$$P(w_i|w_1 w_2 ... w_{i-1})\approx P(w_i|w_{i-1}... _{i-n})$$
+
+NPL Modelling - The Algorithm
+========================================================
+
+In this case we have been consider a maximum of 5-grams. The algorithm created works in the following way:
+
+1. It does some pre-cleaning of the text entered (i.e. convert to lower cases, substitute numbers with text
+2. If the sentence is composed by at least 4 words, it checks in the 5-grams database.
+3. If there are no matches, it checks in the 4-grams database and so on until reach the 2-grams database
+4. If there are no matches even in the 2-grams database, it generates a random word from the first 1 thousand most common words in our original dataset.
+
+Usage of the Application
+========================================================
+
+1. Enter your text in the designated box.
+2. Press the space bar to receive the predicted words.
+3. Three buttons will appear with the predicted words.
+4. Add the word to the text just clicking on it.
+
+![](AppUsage.gif)
+
+Complete Analysis and further information
+========================================================
+
+Find the complete analysis here:
+
+You can reach and deploy the application downloading the following repo:
+
+What we did not cover:
+- We do not deal with punctuation in the text entered;
+- We do not perform any text correction on misspelled words;
+- We do not perform single word prediction.

@@ -21,7 +21,3 @@ bigrams
 trigrams
 fourgrams
 fivegrams
-
-
-# no deal with punctuation
-# no text correction

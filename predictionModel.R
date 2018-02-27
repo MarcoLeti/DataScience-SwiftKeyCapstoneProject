@@ -1,6 +1,7 @@
 library(stringr)
 library(data.table)
 
+# Load the data if needed
 #bigrams <- readRDS("bigrams.RDS")
 #setkeyv(bigrams, "base")
 #trigrams <- readRDS("trigrams.RDS")
@@ -10,14 +11,14 @@ library(data.table)
 #fivegrams <- readRDS("fivegrams.RDS")
 #setkeyv(fivegrams, "base")
 
+# DT to look for words
 #bigrams[base %in% "ice", .(predWord, frequency)]
 #trigrams[base %in% "monitoring the", .(predWord, frequency)]
 #fourgrams[base %in% "want an ice", .(predWord, frequency)]
 #fivegrams[base %in% "a vote has been", .(predWord, frequency)]
 
-#test[,extracted:=sapply(strsplit(original,'\\s+'),function(v) paste(collapse=' ',tail(v,5L)))]
-#source("..\\numbers2words.R")
 source("C:/Users/Marco_Letico/Desktop/DataScience-SwiftKeyCapstoneProject/numbers2words.R")
+
 predictWord <- function(text) {
         predict <- str_detect(text, " $")
         if (predict & !is.na(text)) {
@@ -70,4 +71,4 @@ predictWord <- function(text) {
                 return(predictedWords[1:3])
         }
 }
-################################
+
