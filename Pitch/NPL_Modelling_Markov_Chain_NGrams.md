@@ -1,12 +1,12 @@
-NPL Modelling - Markov Chain and N-Grams Word Prediction
+NLP Modelling - Markov Chain and N-Grams Word Prediction
 ========================================================
 author: Marco Letico
 date: 27 February 2018
 autosize: true
 
-The application was built for the final Capstone project of the Data Science Specialization provided by the Johns Hopkins University through Coursera with the cooperation of SwiftKey. In these slides we will pitch the application going through the usage of it.
+The application was built for the final Capstone project of the Data Science Specialization provided by the Johns Hopkins University through Coursera with the cooperation of SwiftKey. In these slides we will pitch the application going through the usage of it. You can access the app by clicking [here.](https://marcoletico.shinyapps.io/data_science_-_nlp_word_prediction/)
                                         
-NPL Modelling - The Model
+NLP Modelling - The Model
 ========================================================
 
 This application was realized starting from 3 raw textual files downloaded from twitter, from some blogs and news websites.
@@ -15,7 +15,7 @@ In the very first moment, the data has been accurately cleaned. Then it was divi
 
 $$P(w_i|w_1 w_2 ... w_{i-1})\approx P(w_i|w_{i-1}... _{i-n})$$
 
-NPL Modelling - The Algorithm
+NLP Modelling - The Algorithm
 ========================================================
 
 In this case we have been consider a maximum of 5-grams. The algorithm created works in the following way:
@@ -38,9 +38,9 @@ Usage of the Application
 Complete Analysis and further information
 ========================================================
 
-Find the complete analysis here:
+Find the complete analysis here: <https://rpubs.com/mletico/361214>
 
-You can reach and deploy the application downloading the following repo:
+You can reach and deploy the application downloading the following repo: <https://github.com/MarcoLeti/DataScience-SwiftKeyCapstoneProject>
 
 What we did not cover:
 - We do not deal with punctuation in the text entered;

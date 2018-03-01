@@ -1,0 +1,12 @@
+name: data_science_-_nlp_word_prediction
+title: Data Science - NLP Word Prediction
+username:
+account: marcoletico
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 290896
+bundleId: 1247050
+url: https://marcoletico.shinyapps.io/data_science_-_nlp_word_prediction/
+when: 1519917363.10685
+asMultiple: FALSE
+asStatic: FALSE

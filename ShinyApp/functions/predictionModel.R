@@ -12,12 +12,12 @@ library(data.table)
 #setkeyv(fivegrams, "base")
 
 # DT to look for words
-#bigrams[base %in% "ice", .(predWord, frequency)]
-#trigrams[base %in% "monitoring the", .(predWord, frequency)]
-#fourgrams[base %in% "want an ice", .(predWord, frequency)]
-#fivegrams[base %in% "a vote has been", .(predWord, frequency)]
+#bigrams[base %in% "ice", .(predWord)]
+#trigrams[base %in% "monitoring the", .(predWord)]
+#fourgrams[base %in% "want an ice", .(predWord)]
+#fivegrams[base %in% "a vote has been", .(predWord)]
 
-source("C:/Users/Marco_Letico/Desktop/DataScience-SwiftKeyCapstoneProject/numbers2words.R")
+source("functions/numbers2words.R")
 
 predictWord <- function(text) {
         predict <- str_detect(text, " $")
@@ -30,14 +30,14 @@ predictWord <- function(text) {
                 count <- str_count(text, "\\S+")
                 pattern <- "\\w+( \\w+){0,%d}$"
                 predictedWords <- vector()
-                if (count >= 4) {
+                if (exists("fivegrams") & count >= 4) {
                         tmpText <- str_extract(text, sprintf(pattern, 3))
                         predictedWords <- fivegrams[base %in% tmpText, predWord]
                 }
                 
                 if (length(predictedWords) == 3) return(predictedWords)
                 
-                if (count == 3 | length(predictedWords) < 3) {
+                if (exists("fourgrams") & (count == 3 | (length(predictedWords) < 3 & length(predictedWords) > 0))) {
                         tmpText <- str_extract(text, sprintf(pattern, 2))
                         tmp <- fourgrams[base %in% tmpText, predWord]
                         predictedWords <- c(predictedWords,
@@ -46,7 +46,7 @@ predictWord <- function(text) {
                 
                 if (length(predictedWords) >= 3) return(predictedWords[1:3])
                 
-                if (count == 2 | length(predictedWords) < 3) {
+                if (exists("trigrams") & (count == 2 | (length(predictedWords) < 3 & length(predictedWords) > 0))) {
                         tmpText <- str_extract(text, sprintf(pattern, 1))
                         tmp <- trigrams[base %in% tmpText, predWord]
                         predictedWords <- c(predictedWords, 
@@ -55,7 +55,7 @@ predictWord <- function(text) {
                 
                 if (length(predictedWords) >= 3) return(predictedWords[1:3])
                 
-                if (count == 1 | length(predictedWords) < 3) {
+                if (exists("bigrams") & (count == 1 | (length(predictedWords) < 3 & length(predictedWords) > 0))) {
                         tmpText <- str_extract(text, sprintf(pattern, 0))
                         tmp <-  bigrams[base %in% tmpText, predWord]
                         predictedWords <- c(predictedWords, 
@@ -64,7 +64,7 @@ predictWord <- function(text) {
                 
                 if (length(predictedWords) >= 3) return(predictedWords[1:3])
                 
-                randomWords <- sample(unigrams$feature, size = 3)
+                randomWords <- sample(unigrams, size = 3)
                 predictedWords <- c(predictedWords, 
                                     randomWords[!(randomWords %in% predictedWords)])
                 
